@@ -1,6 +1,6 @@
 import os
 import uuid
-from base64 import b64encode
+from base64 import b64encode, b64decode
 import hashlib
 
 from sqlalchemy import MetaData, UniqueConstraint
@@ -43,9 +43,7 @@ class User(Base):
 
     def compare_hash(self, password):
         salt, hashed = self.password.split('|')
-        slt = salt
-        salt = bytes(salt, encoding='utf-8')
-        print(salt, slt, hashed, b64encode(hashlib.scrypt(bytes(password, encoding='utf-8'), n=8192, r=16, p=1, salt=salt)).decode('utf-8'))
+        salt = b64decode(salt)
         if not (b64encode(hashlib.scrypt(bytes(password, encoding='utf-8'), n=8192, r=16, p=1, salt=salt)).
                         decode('utf-8') == hashed):
             return False

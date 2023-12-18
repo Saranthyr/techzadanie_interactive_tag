@@ -30,18 +30,17 @@ def login_post(response: Response,
                               where(User.username == formdata.username)).scalar_one_or_none()
         assert uid is not None
         user = session.get(User, uid)
-        print(user.compare_hash(formdata.password))
         assert user.compare_hash(formdata.password) is True
-        auth_token = jwt.encode({'id': str(uid),
-                                 'iat': time.time(),
-                                 'exp': (datetime.fromtimestamp(time.time()) + timedelta(hours=1)).timestamp(),
-                                 'nbf': (datetime.fromtimestamp(time.time()) + timedelta(milliseconds=10)).
-                                timestamp()},
-                                str(secret),
-                                algorithm='HS384')
-        auth_token = str(f.encrypt(bytes(auth_token, encoding='utf-8')))
-        response.set_cookie(auth_token)
-        return AccessTokenResponse(auth_token=auth_token)
+        access_token = jwt.encode({'id': str(uid),
+                                   'iat': time.time(),
+                                   'exp': (datetime.fromtimestamp(time.time()) + timedelta(hours=1)).timestamp(),
+                                   'nbf': (datetime.fromtimestamp(time.time()) + timedelta(milliseconds=10)).
+                                  timestamp()},
+                                  str(secret),
+                                  algorithm='HS384')
+        access_token = b64encode(f.encrypt(bytes(access_token, encoding='utf-8'))).decode('utf-8')
+        response.set_cookie('Authorization', f'Bearer {access_token}')
+        return AccessTokenResponse(access_token=access_token)
     except AssertionError:
         response.status_code = 403
         return MessageResponse(message='Incorrect credentials')
