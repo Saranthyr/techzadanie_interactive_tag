@@ -23,6 +23,5 @@ from security import router as security_router
 from fastapi import FastAPI
 
 app = FastAPI()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 
 app.include_router(security_router)

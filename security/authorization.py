@@ -1,12 +1,14 @@
 import time
 from datetime import datetime, timedelta
 from base64 import b64encode
+from typing import Union
 
 from fastapi import APIRouter, Response, Depends
 from sqlalchemy import select
 from jose import jwt
 from cryptography.fernet import Fernet
 
+from config import oauth2_scheme
 from db import Session
 from models import User
 from pydantic_models.pydantic_forms import UserLoginForm
@@ -44,3 +46,11 @@ def login_post(response: Response,
     except AssertionError:
         response.status_code = 403
         return MessageResponse(message='Incorrect credentials')
+
+
+@router.post('/logout',
+             response_model=MessageResponse)
+def logout_post(response: Response,
+                token: Union[str, dict] = Depends(oauth2_scheme)):
+    response.delete_cookie('Authorization')
+    return MessageResponse(message='Successfully logged out')
