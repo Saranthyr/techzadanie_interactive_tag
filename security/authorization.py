@@ -41,7 +41,6 @@ def login_post(response: Response,
                                   str(secret),
                                   algorithm='HS384')
         access_token = b64encode(f.encrypt(bytes(access_token, encoding='utf-8'))).decode('utf-8')
-        response.set_cookie('Authorization', f'Bearer {access_token}')
         return AccessTokenResponse(access_token=access_token)
     except AssertionError:
         response.status_code = 403
@@ -52,5 +51,5 @@ def login_post(response: Response,
              response_model=MessageResponse)
 def logout_post(response: Response,
                 token: Union[str, dict] = Depends(oauth2_scheme)):
-    response.delete_cookie('Authorization')
+    response.delete_cookie(key='Authorization')
     return MessageResponse(message='Successfully logged out')

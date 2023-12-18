@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy import select, or_, and_
 
 from db import Session
-from models import User
+from models import User, Dealer, DealerUser
 from pydantic_models.pydantic_forms import UserRegisterForm
 from pydantic_models.pydantic_responses import MessageResponse
 
@@ -34,6 +34,21 @@ def register_post(response: Response,
     except AssertionError:
         response.status_code = 409
         return MessageResponse(message='User with such credentials is already in system')
+
+    try:
+        assert session.execute(select(Dealer.name).
+                               where(Dealer.id == formdata.dealer)).scalar_one_or_none() is not None
+    except AssertionError:
+        response.status_code = 404
+        return MessageResponse(message='No such dealer found')
+
+    try:
+        assert session.execute(select(DealerUser.user_id).
+                               where(DealerUser.dealer_id == formdata.dealer)).scalar_one_or_none() is None
+    except AssertionError:
+        response.status_code = 409
+        return MessageResponse(message='This dealer already has designated user')
+
     uid = uuid.uuid4()
     user = User(
         id=uid,

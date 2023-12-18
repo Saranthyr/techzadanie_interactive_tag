@@ -10,6 +10,7 @@ class UserRegisterForm(BaseModel):
     first_name: str
     last_name: str
     middle_name: Optional[str]
+    dealer: int
 
     @classmethod
     def as_form(cls,
@@ -17,13 +18,15 @@ class UserRegisterForm(BaseModel):
                 password: str = Form(...),
                 first_name: str = Form(...),
                 last_name: str = Form(...),
+                dealer: int = Form(...),
                 middle_name: Optional[str] = Form(None),
                 ):
         return cls(username=username,
                    password=password,
                    first_name=first_name,
                    last_name=last_name,
-                   middle_name=middle_name)
+                   middle_name=middle_name,
+                   dealer=dealer)
 
 
 class UserLoginForm(BaseModel):
