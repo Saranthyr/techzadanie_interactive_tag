@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy import select, or_, and_
 
 from db import Session
-from models import User, Dealer, DealerUser
+from db.models import User, Dealer, DealerUser
 from pydantic_models.pydantic_forms import UserRegisterForm
 from pydantic_models.pydantic_responses import MessageResponse
 

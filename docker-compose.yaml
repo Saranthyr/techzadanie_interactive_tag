@@ -1,0 +1,61 @@
+version: '3.1'
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+
+    env_file:
+      - .env
+
+    restart: unless-stopped
+
+    expose:
+      - 5000
+
+    depends_on:
+      postgres:
+         condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5000"]
+
+  postgres:
+    build:
+      context: .
+      dockerfile: docker/postgres/Dockerfile
+
+    restart: unless-stopped
+
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=test_exeed
+    ports:
+      - 65000:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+
+
+  migrations:
+    build:
+      context: .
+      dockerfile: docker/migrations/Dockerfile
+
+    env_file:
+      - .env
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    command: ["alembic", "upgrade", "head"]
+
+networks:
+  default:
+    driver: bridge
