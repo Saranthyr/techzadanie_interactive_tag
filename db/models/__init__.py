@@ -2,6 +2,7 @@ import os
 import uuid
 from base64 import b64encode, b64decode
 import hashlib
+from typing import List
 
 from sqlalchemy import MetaData, UniqueConstraint, Identity, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase, relationship
@@ -29,10 +30,10 @@ class User(Base):
     password: Mapped['str'] = mapped_column(VARCHAR(256))
     first_name: Mapped['str'] = mapped_column()
     last_name: Mapped['str'] = mapped_column()
-    middle_name: Mapped['str'] = mapped_column(nullable=True)
+    # middle_name: Mapped['str'] = mapped_column(nullable=True)
 
     __table_args__ = (
-        UniqueConstraint('first_name', 'last_name', 'middle_name'),
+        UniqueConstraint('first_name', 'last_name'),
     )
 
     def generate_salted_hash(self):
@@ -57,13 +58,13 @@ class Dealer(Base):
     id: Mapped['int'] = mapped_column(Identity(start=1, increment=1),
                                       primary_key=True)
     name: Mapped['str'] = mapped_column(VARCHAR(512))
-    address: Mapped['str'] = mapped_column(VARCHAR(512))
-    contact_phone: Mapped['str'] = mapped_column(VARCHAR(11))
-    email: Mapped['str'] = mapped_column(VARCHAR(256))
+    # address: Mapped['str'] = mapped_column(VARCHAR(512))
+    # contact_phone: Mapped['str'] = mapped_column(VARCHAR(11))
+    # email: Mapped['str'] = mapped_column(VARCHAR(256))
 
     __table_args__ = (
         UniqueConstraint(
-            'name', 'address'
+            'name',  # 'address'
         ),
     )
 
@@ -81,105 +82,119 @@ class DealerUser(Base):
                                              primary_key=True)
 
 
+class DealerCar(Base):
+    __tablename__ = 'dealer_cars'
+
+    dealer_id: Mapped['int'] = mapped_column(ForeignKey('dealers.id',
+                                                        onupdate='CASCADE',
+                                                        ondelete='CASCADE'),
+                                             primary_key=True)
+    car_vin: Mapped['str'] = mapped_column(ForeignKey('cars.vin',
+                                                      onupdate='CASCADE',
+                                                      ondelete='CASCADE'),
+                                           primary_key=True)
+
+
 class Car(Base):
     __tablename__ = 'cars'
 
     vin: Mapped['str'] = mapped_column(VARCHAR(17),
                                        primary_key=True)
-    dealer_id: Mapped['int'] = mapped_column(ForeignKey('dealers.id',
+    model_kit: Mapped['int'] = mapped_column(ForeignKey('model_kits.id',
                                                         onupdate='CASCADE',
                                                         ondelete='RESTRICT'))
-    equipment: Mapped['int'] = mapped_column(ForeignKey('equipments.id',
-                                                        onupdate='CASCADE',
-                                                        ondelete='RESTRICT'))
-    model_color: Mapped['int'] = mapped_column(ForeignKey('model_colors.id',
-                                                          onupdate='CASCADE',
-                                                          ondelete='RESTRICT'))
-    extra_equipment: Mapped['str'] = mapped_column(TEXT,
-                                                   nullable=True)
-    gifts: Mapped['str'] = mapped_column(TEXT,
-                                         nullable=True)
-
-    model_color_img: Mapped['ModelColor'] = relationship()
-    equipments: Mapped['Equipment'] = relationship()
-    dealer: Mapped['Dealer'] = relationship(back_populates='cars')
-
-
-class ModelColor(Base):
-    __tablename__ = 'model_colors'
-
-    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1, cache=10),
-                                      primary_key=True)
-    model_id: Mapped['int'] = mapped_column(ForeignKey('models.id',
-                                                       onupdate='CASCADE',
-                                                       ondelete='RESTRICT'))
-    color_id: Mapped['int'] = mapped_column(ForeignKey('colors.id',
-                                                       onupdate='CASCADE',
-                                                       ondelete='RESTRICT'))
-    filename: Mapped['str'] = mapped_column(VARCHAR(64),
-                                            nullable=True)
-
-
-class Model(Base):
-    __tablename__ = 'models'
-
-    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1, cache=10),
-                                      primary_key=True)
-    name: Mapped['str'] = mapped_column(VARCHAR(64))
-
-
-class Equipment(Base):
-    __tablename__ = 'equipments'
-
-    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1, cache=10),
-                                      primary_key=True)
-    model: Mapped['int'] = mapped_column(ForeignKey('models.id',
-                                                    onupdate='CASCADE',
-                                                    ondelete='RESTRICT'))
     engine: Mapped['int'] = mapped_column(ForeignKey('engines.id',
                                                      onupdate='CASCADE',
                                                      ondelete='RESTRICT'))
     transmission: Mapped['int'] = mapped_column(ForeignKey('transmissions.id',
                                                            onupdate='CASCADE',
                                                            ondelete='RESTRICT'))
+    colour: Mapped['int'] = mapped_column(ForeignKey('colours.id',
+                                                     onupdate='CASCADE',
+                                                     ondelete='RESTRICT'))
+
+    model_kit_data: Mapped['ModelKit'] = relationship(passive_deletes=True)
+    engine_data: Mapped['Engine'] = relationship(passive_deletes=True)
+    transmission_data: Mapped['Transmission'] = relationship(passive_deletes=True)
+    colour_data: Mapped['Colour'] = relationship(passive_deletes=True)
+
+
+class ModelKit(Base):
+    __tablename__ = 'model_kits'
+
+    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1),
+                                      primary_key=True)
+    model_id: Mapped['int'] = mapped_column(ForeignKey('models.id',
+                                                       onupdate='CASCADE',
+                                                       ondelete='CASCADE'))
+    kit_id: Mapped['int'] = mapped_column(ForeignKey('kits.id',
+                                                     onupdate='CASCADE',
+                                                     ondelete='RESTRICT'))
+
+    __table_args__ = (UniqueConstraint(
+        'model_id', 'kit_id'
+    ),)
+
+
+class Model(Base):
+    __tablename__ = 'models'
+
+    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1),
+                                      primary_key=True)
+    name: Mapped['str'] = mapped_column(VARCHAR(64), unique=True)
+
+
+class Kit(Base):
+    __tablename__ = 'kits'
+
+    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1),
+                                      primary_key=True)
+    name: Mapped['str'] = mapped_column(VARCHAR(64))
+
+
+class ModelKitParameter(Base):
+    __tablename__ = 'model_kit_parameters'
+
+    model_kit_id: Mapped['int'] = mapped_column(ForeignKey('model_kits.id',
+                                                           onupdate='CASCADE',
+                                                           ondelete='CASCADE'),
+                                                primary_key=True)
+    parameter_id: Mapped['int'] = mapped_column(ForeignKey('parameters.id',
+                                                           onupdate='CASCADE',
+                                                           ondelete='CASCADE'),
+                                                primary_key=True)
+
+    parameter_data: Mapped[List['Parameter']] = relationship(uselist=True,
+                                                             passive_deletes=True)
+
+
+class Parameter(Base):
+    __tablename__ = 'parameters'
+
+    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1),
+                                      primary_key=True)
+    name: Mapped['str'] = mapped_column(VARCHAR(64))
 
 
 class Engine(Base):
     __tablename__ = 'engines'
 
-    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1, cache=10),
+    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1),
                                       primary_key=True)
-    name: Mapped['str'] = mapped_column(VARCHAR(128))
-    # manufacturer: Mapped['int'] = mapped_column()  ? ACTECO only
-    volume: Mapped['float'] = mapped_column(REAL)
-    hps: Mapped['int'] = mapped_column(INTEGER)
-    consumption: Mapped['float'] = mapped_column(REAL)
-    acceleration: Mapped['float'] = mapped_column(REAL)
+    name: Mapped['str'] = mapped_column(VARCHAR(64))
 
 
 class Transmission(Base):
     __tablename__ = 'transmissions'
 
-    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1, cache=10),
-                                      primary_key=True)
-    type: Mapped['int'] = mapped_column(ForeignKey('transmission_types.id',
-                                                   onupdate='CASCADE',
-                                                   ondelete='CASCADE'))
-    speed: Mapped['int'] = mapped_column(INTEGER)
-
-
-class TransmissionType(Base):
-    __tablename__ = 'transmission_types'
-
-    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1, cache=10),
+    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1),
                                       primary_key=True)
     name: Mapped['str'] = mapped_column(VARCHAR(64))
-    description: Mapped['str'] = mapped_column(TEXT)
 
 
-class Color(Base):
-    __tablename__ = 'colors'
+class Colour(Base):
+    __tablename__ = 'colours'
 
-    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1, cache=10),
+    id: Mapped['int'] = mapped_column(Identity(start=1, increment=1),
                                       primary_key=True)
     name: Mapped['str'] = mapped_column(VARCHAR(64))

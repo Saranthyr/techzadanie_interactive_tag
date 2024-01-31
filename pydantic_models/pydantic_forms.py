@@ -9,7 +9,6 @@ class UserRegisterForm(BaseModel):
     password: str
     first_name: str
     last_name: str
-    middle_name: Optional[str]
     dealer: int
 
     @classmethod
@@ -19,13 +18,11 @@ class UserRegisterForm(BaseModel):
                 first_name: str = Form(...),
                 last_name: str = Form(...),
                 dealer: int = Form(...),
-                middle_name: Optional[str] = Form(None),
                 ):
         return cls(username=username,
                    password=password,
                    first_name=first_name,
                    last_name=last_name,
-                   middle_name=middle_name,
                    dealer=dealer)
 
 

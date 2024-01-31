@@ -25,14 +25,16 @@ secret = b64encode(secret)
 @router.post('/login')
 def login_post(response: Response,
                formdata: UserLoginForm = Depends(UserLoginForm.as_form)):
-    session = Session()
 
     try:
-        uid = session.execute(select(User.id).
-                              where(User.username == formdata.username)).scalar_one_or_none()
-        assert uid is not None
-        user = session.get(User, uid)
-        assert user.compare_hash(formdata.password) is True
+        with Session() as session:
+            uid = session.execute(select(User.id).
+                                  where(User.username == formdata.username)).scalar_one_or_none()
+            if uid is None:
+                raise AssertionError
+            user = session.get(User, uid)
+            if user.compare_hash(formdata.password) is False:
+                raise AssertionError
         access_token = jwt.encode({'id': str(uid),
                                    'iat': time.time(),
                                    'exp': (datetime.fromtimestamp(time.time()) + timedelta(hours=1)).timestamp(),
@@ -41,6 +43,7 @@ def login_post(response: Response,
                                   str(secret),
                                   algorithm='HS384')
         access_token = b64encode(f.encrypt(bytes(access_token, encoding='utf-8'))).decode('utf-8')
+        response.set_cookie('access_token', access_token)
         return AccessTokenResponse(access_token=access_token)
     except AssertionError:
         response.status_code = 403
@@ -51,5 +54,5 @@ def login_post(response: Response,
              response_model=MessageResponse)
 def logout_post(response: Response,
                 token: Union[str, dict] = Depends(oauth2_scheme)):
-    response.delete_cookie(key='Authorization')
+    response.delete_cookie(key='access_token')
     return MessageResponse(message='Successfully logged out')

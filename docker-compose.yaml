@@ -10,16 +10,18 @@ services:
 
     restart: unless-stopped
 
-    expose:
-      - 5000
-
     depends_on:
       postgres:
-         condition: service_healthy
+        condition: service_healthy
       migrations:
         condition: service_completed_successfully
+#      nginx:
+#        condition: service_started
 
-    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5000"]
+    ports:
+      - 5000:5000
+
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5000", "--proxy-headers"]
 
   postgres:
     build:
@@ -55,6 +57,19 @@ services:
         condition: service_healthy
 
     command: ["alembic", "upgrade", "head"]
+
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+
+    depends_on:
+      - api
+
+    ports:
+      - 80:80
+      - 443:443
 
 networks:
   default:

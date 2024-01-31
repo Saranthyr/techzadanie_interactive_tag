@@ -18,50 +18,47 @@ router = APIRouter(prefix="/registration")
              })
 def register_post(response: Response,
                   formdata: UserRegisterForm = Depends(UserRegisterForm.as_form)):
-    session = Session()
-
-    try:
-        assert session.execute(select(User.username,
+    with Session() as session:
+        try:
+            if session.execute(select(User.username,
                                       User.first_name,
-                                      User.last_name,
-                                      User.middle_name).where(or_(User.username == formdata.username,
-                                                                  and_
-                                                                  (User.first_name == formdata.first_name,
-                                                                   User.last_name == formdata.last_name,
-                                                                   User.middle_name == formdata.middle_name)))).\
-                   one_or_none() is None
+                                      User.last_name).where(or_(User.username == formdata.username,
+                                                                and_
+                                                                (User.first_name == formdata.first_name,
+                                                                 User.last_name == formdata.last_name)))).\
+                       one_or_none() is not None:
+                raise AssertionError
+        except AssertionError:
+            response.status_code = 409
+            return MessageResponse(message='User with such credentials is already in system')
 
-    except AssertionError:
-        response.status_code = 409
-        return MessageResponse(message='User with such credentials is already in system')
+        try:
+            if session.execute(select(Dealer.name).
+                               where(Dealer.id == formdata.dealer)).scalar_one_or_none() is None:
+                raise AssertionError
+        except AssertionError:
+            response.status_code = 404
+            return MessageResponse(message='No such dealer found')
 
-    try:
-        assert session.execute(select(Dealer.name).
-                               where(Dealer.id == formdata.dealer)).scalar_one_or_none() is not None
-    except AssertionError:
-        response.status_code = 404
-        return MessageResponse(message='No such dealer found')
+        try:
+            if session.execute(select(DealerUser.user_id).
+                               where(DealerUser.dealer_id == formdata.dealer)).scalar_one_or_none() is not None:
+                raise AssertionError
+        except AssertionError:
+            response.status_code = 409
+            return MessageResponse(message='This dealer already has designated user')
 
-    try:
-        assert session.execute(select(DealerUser.user_id).
-                               where(DealerUser.dealer_id == formdata.dealer)).scalar_one_or_none() is None
-    except AssertionError:
-        response.status_code = 409
-        return MessageResponse(message='This dealer already has designated user')
-
-    uid = uuid.uuid4()
-    user = User(
-        id=uid,
-        username=formdata.username,
-        first_name=formdata.first_name,
-        last_name=formdata.last_name,
-        middle_name=formdata.middle_name,
-        password=formdata.password
-    )
-    user.generate_salted_hash()
-    session.add(user)
-    session.commit()
-    session.close()
+        uid = uuid.uuid4()
+        user = User(
+            id=uid,
+            username=formdata.username,
+            first_name=formdata.first_name,
+            last_name=formdata.last_name,
+            password=formdata.password
+        )
+        user.generate_salted_hash()
+        session.add(user)
+        session.commit()
     response.status_code = 200
     return MessageResponse(message='Success')
 
